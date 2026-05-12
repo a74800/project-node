@@ -1,0 +1,8 @@
+PUT http://localhost:3000/tasks/1
+Content-Type: application/json
+
+{
+  "title": "Estudar Redis a sério",
+  "description": "TTL, invalidação e cache",
+  "status": "in_progress"
+}
