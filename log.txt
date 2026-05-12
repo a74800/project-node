@@ -18,7 +18,6 @@ frontend-task-manager  |   ➜  Local:   http://localhost:5173/
 redis-task-manager     | 1:M 29 Apr 2026 17:30:21.933 * monotonic clock: POSIX clock_gettime
 frontend-task-manager  |   ➜  Network: http://172.19.0.7:5173/
 redis-task-manager     | 1:M 29 Apr 2026 17:30:21.936 * Running mode=standalone, port=6379.
-
 rabbitmq-task-manager  | 2026-04-29 17:30:25.544247+00:00 [notice] <0.254.0> Logging: switching to configured handler(s); following messages may not be visible in this log output
 rabbitmq-task-manager  | [38;5;87m2026-04-29 17:30:25.544982+00:00 [notice] <0.254.0> Logging: configured log handlers are now ACTIVE[0m
 rabbitmq-task-manager  | 2026-04-29 17:30:25.561172+00:00 [info] <0.254.0> ra: starting system quorum_queues[0m
