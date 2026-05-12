@@ -1,50 +1,65 @@
 const db = require('../config/db');
 
-async function getAllTasks() {
-  const [rows] = await db.query('SELECT * FROM tasks');
+async function getAllTasks(userId) {
+  const [rows] = await db.query(
+    'SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC',
+    [userId]
+  );
+
   return rows;
 }
 
-async function getTaskById(id) {
-  const [rows] = await db.query('SELECT * FROM tasks WHERE id = ?', [id]);
+async function getTaskById(id, userId) {
+  const [rows] = await db.query(
+    'SELECT * FROM tasks WHERE id = ? AND user_id = ?',
+    [id, userId]
+  );
+
   return rows[0];
 }
 
-async function createTask(task) {
-  const { title, description, status } = task;
-
+async function createTask({ userId, title, description, status }) {
   const [result] = await db.query(
-    'INSERT INTO tasks (title, description, status) VALUES (?, ?, ?)',
-    [title, description, status]
+    'INSERT INTO tasks (user_id, title, description, status) VALUES (?, ?, ?, ?)',
+    [userId, title, description, status]
   );
 
   return {
     id: result.insertId,
+    user_id: userId,
     title,
     description,
     status,
   };
 }
 
-async function updateTask(id, task) {
-  const { title, description, status } = task;
-
+async function updateTask(id, userId, { title, description, status }) {
   const [result] = await db.query(
-    'UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?',
-    [title, description, status, id]
+    `UPDATE tasks
+     SET title = ?, description = ?, status = ?
+     WHERE id = ? AND user_id = ?`,
+    [title, description, status, id, userId]
   );
 
-  return result;
+  return result.affectedRows;
 }
 
-async function deleteTask(id) {
-  const [result] = await db.query('DELETE FROM tasks WHERE id = ?', [id]);
-  return result;
+async function deleteTask(id, userId) {
+  const [result] = await db.query(
+    'DELETE FROM tasks WHERE id = ? AND user_id = ?',
+    [id, userId]
+  );
+
+  return result.affectedRows;
 }
 
-async function getTaskCountsByStatus() {
+async function getTaskCountsByStatus(userId) {
   const [rows] = await db.query(
-    'SELECT status, COUNT(*) AS total FROM tasks GROUP BY status'
+    `SELECT status, COUNT(*) AS total
+     FROM tasks
+     WHERE user_id = ?
+     GROUP BY status`,
+    [userId]
   );
 
   return rows;

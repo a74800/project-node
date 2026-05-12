@@ -2,7 +2,10 @@ const taskService = require('../services/taskService');
 
 async function getAllTasks(req, res) {
   try {
-    const tasks = await taskService.getAllTasks();
+    const userId = req.user.id;
+
+    const tasks = await taskService.getAllTasks(userId);
+
     res.json(tasks);
   } catch (error) {
     console.error('Erro ao obter tasks:', error.message);
@@ -15,7 +18,10 @@ async function getAllTasks(req, res) {
 async function getTaskById(req, res) {
   try {
     const { id } = req.params;
-    const task = await taskService.getTaskById(id);
+    const userId = req.user.id;
+
+    const task = await taskService.getTaskById(id, userId);
+
     res.json(task);
   } catch (error) {
     console.error('Erro ao obter task:', error.message);
@@ -27,7 +33,10 @@ async function getTaskById(req, res) {
 
 async function createTask(req, res) {
   try {
-    const task = await taskService.createTask(req.body);
+    const userId = req.user.id;
+
+    const task = await taskService.createTask(userId, req.body);
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Erro ao criar task:', error.message);
@@ -40,7 +49,10 @@ async function createTask(req, res) {
 async function updateTask(req, res) {
   try {
     const { id } = req.params;
-    const updatedTask = await taskService.updateTask(id, req.body);
+    const userId = req.user.id;
+
+    const updatedTask = await taskService.updateTask(id, userId, req.body);
+
     res.json(updatedTask);
   } catch (error) {
     console.error('Erro ao atualizar task:', error.message);
@@ -53,7 +65,10 @@ async function updateTask(req, res) {
 async function deleteTask(req, res) {
   try {
     const { id } = req.params;
-    const result = await taskService.deleteTask(id);
+    const userId = req.user.id;
+
+    const result = await taskService.deleteTask(id, userId);
+
     res.json(result);
   } catch (error) {
     console.error('Erro ao remover task:', error.message);

@@ -1,8 +1,5 @@
 const redisClient = require('../config/redis');
 const { publishTaskEvent } = require('../utils/publisher');
-const TASKS_KEY = 'tasks:all';
-const TASK_KEY_PREFIX = 'tasks:';
-
 const taskRepository = require('../repositories/taskRepository');
 
 const ALLOWED_STATUS = ['pending', 'in_progress', 'done'];
@@ -11,39 +8,46 @@ function validateStatus(status) {
   return ALLOWED_STATUS.includes(status);
 }
 
-async function getAllTasks() {
-  // 1. tentar ir ao Redis
-  const cached = await redisClient.get(TASKS_KEY);
+function getTasksKey(userId) {
+  return `tasks:user:${userId}:all`;
+}
+
+function getTaskKey(userId, taskId) {
+  return `tasks:user:${userId}:task:${taskId}`;
+}
+
+async function getAllTasks(userId) {
+  const cacheKey = getTasksKey(userId);
+
+  const cached = await redisClient.get(cacheKey);
 
   if (cached) {
-    console.log('Cache HIT - tasks');
+    console.log(`Cache HIT - ${cacheKey}`);
     return JSON.parse(cached);
   }
 
-  console.log('Cache MISS - tasks');
+  console.log(`Cache MISS - ${cacheKey}`);
 
-  // 2. ir ao MySQL
-  const tasks = await taskRepository.getAllTasks();
+  const tasks = await taskRepository.getAllTasks(userId);
 
-  // 3. guardar no Redis (TTL 60s)
-  await redisClient.setEx(TASKS_KEY, 60, JSON.stringify(tasks));
+  await redisClient.setEx(cacheKey, 60, JSON.stringify(tasks));
 
   return tasks;
 }
 
-async function getTaskById(id) {
-  const key = TASK_KEY_PREFIX + id;
+async function getTaskById(id, userId) {
+  const cacheKey = getTaskKey(userId, id);
 
-  const cached = await redisClient.get(key);
+  const cached = await redisClient.get(cacheKey);
 
   if (cached) {
-    console.log(`Cache HIT - task ${id}`);
+    console.log(`Cache HIT - ${cacheKey}`);
     return JSON.parse(cached);
   }
 
-  console.log(`Cache MISS - task ${id}`);
+  console.log(`Cache MISS - ${cacheKey}`);
 
-  const task = await taskRepository.getTaskById(id);
+  const task = await taskRepository.getTaskById(id, userId);
 
   if (!task) {
     const error = new Error('Task não encontrada');
@@ -51,13 +55,12 @@ async function getTaskById(id) {
     throw error;
   }
 
-  // guardar no Redis
-  await redisClient.setEx(key, 60, JSON.stringify(task));
+  await redisClient.setEx(cacheKey, 60, JSON.stringify(task));
 
   return task;
 }
 
-async function createTask(data) {
+async function createTask(userId, data) {
   const { title, description, status } = data;
 
   if (!title || title.trim() === '') {
@@ -75,15 +78,17 @@ async function createTask(data) {
   }
 
   const newTask = await taskRepository.createTask({
+    userId,
     title: title.trim(),
     description: description || null,
     status: taskStatus,
   });
 
-  await redisClient.del(TASKS_KEY);
+  await redisClient.del(getTasksKey(userId));
 
   await publishTaskEvent({
     event: 'task.created',
+    userId,
     taskId: newTask.id,
     title: newTask.title,
     status: newTask.status,
@@ -93,8 +98,8 @@ async function createTask(data) {
   return newTask;
 }
 
-async function updateTask(id, data) {
-  const existingTask = await taskRepository.getTaskById(id);
+async function updateTask(id, userId, data) {
+  const existingTask = await taskRepository.getTaskById(id, userId);
 
   if (!existingTask) {
     const error = new Error('Task não encontrada');
@@ -118,19 +123,20 @@ async function updateTask(id, data) {
     throw error;
   }
 
-  await taskRepository.updateTask(id, {
+  await taskRepository.updateTask(id, userId, {
     title: title.trim(),
     description: description || null,
     status: taskStatus,
   });
 
-  await redisClient.del(TASKS_KEY);
-  await redisClient.del(TASK_KEY_PREFIX + id);
+  await redisClient.del(getTasksKey(userId));
+  await redisClient.del(getTaskKey(userId, id));
 
-  const updatedTask = await taskRepository.getTaskById(id);
+  const updatedTask = await taskRepository.getTaskById(id, userId);
 
   await publishTaskEvent({
     event: 'task.updated',
+    userId,
     taskId: updatedTask.id,
     title: updatedTask.title,
     status: updatedTask.status,
@@ -140,8 +146,8 @@ async function updateTask(id, data) {
   return updatedTask;
 }
 
-async function deleteTask(id) {
-  const existingTask = await taskRepository.getTaskById(id);
+async function deleteTask(id, userId) {
+  const existingTask = await taskRepository.getTaskById(id, userId);
 
   if (!existingTask) {
     const error = new Error('Task não encontrada');
@@ -149,13 +155,14 @@ async function deleteTask(id) {
     throw error;
   }
 
-  await taskRepository.deleteTask(id);
+  await taskRepository.deleteTask(id, userId);
 
-  await redisClient.del(TASKS_KEY);
-  await redisClient.del(TASK_KEY_PREFIX + id);
+  await redisClient.del(getTasksKey(userId));
+  await redisClient.del(getTaskKey(userId, id));
 
   await publishTaskEvent({
     event: 'task.deleted',
+    userId,
     taskId: existingTask.id,
     title: existingTask.title,
     status: existingTask.status,

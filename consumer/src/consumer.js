@@ -17,8 +17,10 @@ const DLQ_ROUTING_KEY = 'task.event.failed';
 
 async function saveEvent(event) {
   await db.query(
-    'INSERT INTO task_events (task_id, event_type, payload) VALUES (?, ?, ?)',
+    `INSERT INTO task_events (user_id, task_id, event_type, payload)
+     VALUES (?, ?, ?, ?)`,
     [
+      event.userId,
       event.taskId || null,
       event.event,
       JSON.stringify(event),

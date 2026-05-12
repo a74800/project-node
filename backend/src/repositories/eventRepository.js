@@ -1,25 +1,36 @@
 const db = require('../config/db');
 
-async function getAllEvents() {
+async function getAllEvents(userId) {
   const [rows] = await db.query(
-    'SELECT id, task_id, event_type, payload, created_at FROM task_events ORDER BY created_at DESC'
+    `SELECT *
+     FROM task_events
+     WHERE user_id = ?
+     ORDER BY created_at DESC`,
+    [userId]
   );
 
   return rows;
 }
 
-async function getEventsByTaskId(taskId) {
+async function getEventsByTaskId(taskId, userId) {
   const [rows] = await db.query(
-    'SELECT id, task_id, event_type, payload, created_at FROM task_events WHERE task_id = ? ORDER BY created_at DESC',
-    [taskId]
+    `SELECT *
+     FROM task_events
+     WHERE task_id = ? AND user_id = ?
+     ORDER BY created_at DESC`,
+    [taskId, userId]
   );
 
   return rows;
 }
 
-async function getEventCountsByType() {
+async function getEventCountsByType(userId) {
   const [rows] = await db.query(
-    'SELECT event_type, COUNT(*) AS total FROM task_events GROUP BY event_type'
+    `SELECT event_type, COUNT(*) AS total
+     FROM task_events
+     WHERE user_id = ?
+     GROUP BY event_type`,
+    [userId]
   );
 
   return rows;
