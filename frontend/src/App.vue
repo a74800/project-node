@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 import TasksView from './views/TasksView.vue'
 import EventsView from './views/EventsView.vue'
@@ -15,10 +15,21 @@ onMounted(() => {
   if (storedUser) {
     user.value = JSON.parse(storedUser)
   }
+
+  window.addEventListener('auth:logout', handleLogoutEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('auth:logout', handleLogoutEvent)
 })
 
 function handleAuthenticated(authenticatedUser) {
   user.value = authenticatedUser
+  currentView.value = 'tasks'
+}
+
+function handleLogoutEvent() {
+  user.value = null
   currentView.value = 'tasks'
 }
 
